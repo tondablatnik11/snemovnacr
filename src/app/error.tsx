@@ -11,8 +11,14 @@ export default function GlobalError({
   reset: () => void;
 }) {
   useEffect(() => {
-    // Log chyby do konzole pro debugging (na Vercelu jde do Functions Logs)
-    console.error("[App Error]", error);
+    // V produkci Next.js schovává chybovou zprávu a poskytuje jen `digest`.
+    // Pro debugging dočasně zobrazíme celý error i message v browser console.
+    console.error("[App Error]", {
+      name: error.name,
+      message: error.message,
+      digest: error.digest,
+      stack: error.stack,
+    });
   }, [error]);
 
   return (
@@ -26,8 +32,10 @@ export default function GlobalError({
         </div>
 
         {error.digest && (
-          <div className="text-xs text-muted-foreground">
-            <span className="font-mono">ID chyby: {error.digest}</span>
+          <div className="text-xs text-muted-foreground space-y-1">
+            <div>
+              <span className="font-mono">ID chyby: {error.digest}</span>
+            </div>
           </div>
         )}
 
