@@ -136,7 +136,7 @@ export async function loadHlasovani(snapshot: DownloadedZip) {
             id: 0,
             idPoslanec: parseInt(r[0] ?? "0", 10),
             od: parseDateTime(r[1]) ?? new Date(),
-            do: parseDateTime(r[2]) ?? new Date(),
+            doDo: parseDateTime(r[2]) ?? new Date(),
             duvod: emptyToNull(r[3]),
           }))
         )

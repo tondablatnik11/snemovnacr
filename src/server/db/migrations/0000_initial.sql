@@ -183,14 +183,17 @@ CREATE INDEX IF NOT EXISTS hp_hlasovani_idx ON hlasovani_poslanec(id_hlasovani);
 CREATE UNIQUE INDEX IF NOT EXISTS hp_poslanec_hlasovani_uq ON hlasovani_poslanec(id_poslanec, id_hlasovani);
 
 -- Omluvy
+-- Sloupec "do" je v PostgreSQL rezervované slovo, proto je v SQL identifikátor
+-- `do_do` a v Drizzle schema camelCase `doDo`.
 CREATE TABLE IF NOT EXISTS omluva (
   id SERIAL PRIMARY KEY,
   id_poslanec INTEGER NOT NULL REFERENCES poslanec(id),
   od TIMESTAMPTZ NOT NULL,
-  do TIMESTAMPTZ NOT NULL,
+  do_do TIMESTAMPTZ NOT NULL,
   duvod TEXT
 );
 CREATE INDEX IF NOT EXISTS omluva_poslanec_idx ON omluva(id_poslanec);
+CREATE INDEX IF NOT EXISTS omluva_interval_idx ON omluva(od, do_do);
 
 -- Tisky
 CREATE TABLE IF NOT EXISTS tisk (

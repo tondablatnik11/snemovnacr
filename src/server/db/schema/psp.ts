@@ -243,12 +243,14 @@ export const omluva = pgTable(
     id: integer("id").primaryKey(),
     idPoslanec: integer("id_poslanec").notNull().references(() => poslanec.id),
     od: timestamp("od", { withTimezone: true }).notNull(),
-    do: timestamp("do", { withTimezone: true }).notNull(),
+    // Sloupec "do" v PostgreSQL je rezervované slovo, proto camelCase mapujeme
+    // na `do_do` identifikátor (Drizzle standard pro snake_case).
+    doDo: timestamp("do_do", { withTimezone: true }).notNull(),
     duvod: text("duvod"),
   },
   (t) => ({
     poslanecIdx: index("omluva_poslanec_idx").on(t.idPoslanec),
-    intervalIdx: index("omluva_interval_idx").on(t.od, t.do),
+    intervalIdx: index("omluva_interval_idx").on(t.od, t.doDo),
   })
 );
 
