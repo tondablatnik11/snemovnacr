@@ -5,10 +5,17 @@ import { useRef, useEffect } from "react";
 import { Send } from "lucide-react";
 import { cn } from "~/lib/utils";
 
+/**
+ * AI SDK 5 kompatibilní chat window.
+ * - `messages` je `UIMessage[]` s `parts` polem (místo `content`)
+ * - text extraction: `m.parts.filter(p => p.type === 'text').map(p => p.text).join('')`
+ */
 export function ChatWindow() {
-  const { messages, input, handleInputChange, handleSubmit, isLoading, append } = useChat({
+  const { messages, input, handleInputChange, handleSubmit, status } = useChat({
     api: "/api/chat",
   });
+
+  const isLoading = status === "submitted" || status === "streaming";
 
   const scrollRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -23,24 +30,30 @@ export function ChatWindow() {
             <p className="text-sm">Zadejte dotaz nebo klikněte na navrhovanou otázku výše.</p>
           </div>
         )}
-        {messages.map((m) => (
-          <div key={m.id} className={cn("flex", m.role === "user" ? "justify-end" : "justify-start")}>
-            <div
-              className={cn(
-                "max-w-[80%] rounded-lg px-4 py-2.5 text-sm",
-                m.role === "user" ? "bg-primary text-primary-foreground" : "bg-muted text-foreground"
-              )}
-            >
-              {m.role === "user" ? (
-                <p className="whitespace-pre-wrap">{m.content}</p>
-              ) : (
-                <div className="prose prose-sm dark:prose-invert max-w-none">
-                  <FormattedAnswer content={m.content} />
-                </div>
-              )}
+        {messages.map((m) => {
+          const text = m.parts
+            .filter((p): p is { type: "text"; text: string; state?: string } => p.type === "text")
+            .map((p) => p.text)
+            .join("");
+          return (
+            <div key={m.id} className={cn("flex", m.role === "user" ? "justify-end" : "justify-start")}>
+              <div
+                className={cn(
+                  "max-w-[80%] rounded-lg px-4 py-2.5 text-sm",
+                  m.role === "user" ? "bg-primary text-primary-foreground" : "bg-muted text-foreground"
+                )}
+              >
+                {m.role === "user" ? (
+                  <p className="whitespace-pre-wrap">{text}</p>
+                ) : (
+                  <div className="prose prose-sm dark:prose-invert max-w-none">
+                    <FormattedAnswer content={text} />
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
         {isLoading && (
           <div className="flex justify-start">
             <div className="bg-muted rounded-lg px-4 py-2.5">
@@ -74,7 +87,6 @@ export function ChatWindow() {
 }
 
 function FormattedAnswer({ content }: { content: string }) {
-  // Jednoduchý markdown-like formátovač — odstavce a citace [1]
   const paragraphs = content.split(/\n\n+/);
   return (
     <>

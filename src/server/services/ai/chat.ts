@@ -1,20 +1,23 @@
-// AI chat — streaming s Vercel AI SDK + NVIDIA NIM
+// AI chat — streaming s Vercel AI SDK 5 + NVIDIA NIM
 
-import { streamText, type Message } from "ai";
+import { streamText, type UIMessage, convertToModelMessages } from "ai";
 import { chatModel } from "./nvidia";
 import { retrieve, formatSourcesForPrompt } from "./rag";
 import { SYSTEM_PROMPT } from "./prompts";
 import { logger } from "~/lib/logger";
 
 export interface ChatParams {
-  messages: Message[];
-  /** Volitelné — přeskočí RAG retrieval a jde rovnou do LLM */
+  messages: UIMessage[];
   skipRag?: boolean;
 }
 
 export async function chatStream({ messages, skipRag }: ChatParams) {
-  const lastUserMsg = messages.filter((m) => m.role === "user").slice(-1)[0];
-  const question = typeof lastUserMsg?.content === "string" ? lastUserMsg.content : "";
+  const lastUserMsg = [...messages].reverse().find((m) => m.role === "user");
+  const question =
+    lastUserMsg?.parts
+      .filter((p): p is { type: "text"; text: string } => p.type === "text")
+      .map((p) => p.text)
+      .join("") ?? "";
 
   let sources = "";
   if (!skipRag && question) {
@@ -22,7 +25,7 @@ export async function chatStream({ messages, skipRag }: ChatParams) {
       const rag = await retrieve(question);
       sources = formatSourcesForPrompt(rag.sources);
     } catch (err) {
-      logger.warn({ err: String(err) }, "× RAG retrieve selhal, pokračuji bez kontextu");
+      logger.warn({ err: String(err) }, "RAG retrieve selhal, pokračuji bez kontextu");
     }
   }
 
@@ -33,11 +36,11 @@ export async function chatStream({ messages, skipRag }: ChatParams) {
   const result = streamText({
     model: chatModel,
     system: systemMessage,
-    messages,
+    messages: convertToModelMessages(messages),
     temperature: 0.2,
-    maxTokens: 1500,
+    maxOutputTokens: 1500,
     topP: 0.95,
-    onError: (err) => logger.error({ err }, "× streamText error"),
+    onError: (err) => logger.error({ err }, "streamText error"),
   });
 
   return result;

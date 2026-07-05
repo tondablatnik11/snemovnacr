@@ -1,0 +1,53 @@
+# Vercel ignoruje tyto soubory při buildu — zrychluje upload a build
+.git
+.github
+.claude
+.cursor
+.idea
+.vscode
+node_modules
+.next
+dist
+coverage
+*.log
+.env.local
+.env.production
+
+# ETL skripty — nepotřebujeme je ve Vercel buildu
+scripts/etl-run.ts
+scripts/embed-all.ts
+
+# Worker entry — samostatný deploy (Railway/Fly.io)
+scripts/worker.ts
+
+# Testy
+tests/
+playwright-report/
+test-results/
+
+# Docker — vývoj only
+docker/
+docker-compose.yml
+
+# Dokumentace (zachovat v Gitu, ale ne v buildu)
+*.md
+!README.md
+!CHANGELOG.md
+docs/
+
+# Drizzle migrace runner se nepoužívá na Vercelu (DB migrace se spouští ručně nebo z workeru)
+src/server/db/migrate.ts
+src/server/db/seed/
+
+# Storage utility (R2) — ne na Vercelu
+src/server/services/storage/
+
+# Steno scraper — CPU/težký, ne na Vercelu
+src/server/services/etl/scraper-steno.ts
+src/server/services/etl/scraper-psp.ts
+
+# Velké analytické dotazy (běží asynchronně ve workeru)
+src/server/services/analytics/
+
+# UNL parser testy/devtools
+src/lib/unl.ts.bak
