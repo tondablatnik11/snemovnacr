@@ -260,4 +260,4 @@ Kód: MIT License.
 - [ ] Mobilní nativní appka (React Native)
 - [ ] Federace s EU tiskovými daty
 - [ ] Platební brána pro fundraising petic
-- [ ] Real-time websocket voting (přes psp.cz SSE)
+- [ ] Real-time websocket voting (přes psp.cz SSE)# snemovnacr
