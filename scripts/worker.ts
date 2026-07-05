@@ -1,7 +1,11 @@
 // Worker entry: pnpm worker
 // Spouští BullMQ workery pro ETL a Embed frontu
 
-import "dotenv/config";
+// Čti .env.local (Next.js standard), pak fallback .env.
+import { config as loadEnv } from "dotenv";
+loadEnv({ path: ".env.local" });
+loadEnv({ path: ".env" });
+
 import { logger } from "~/lib/logger";
 import { startEtlWorker } from "~/server/services/etl/jobs";
 import { startEmbedWorker } from "~/server/services/ai/embed-worker";

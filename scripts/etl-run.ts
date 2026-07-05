@@ -1,7 +1,12 @@
 // Manuální spuštění ETL — pro testy a bootstrapping
 // pnpm etl:run [--dataset=poslanci|hlasovani|tisky|interpelace|steno|all] [--term=10]
 
-import "dotenv/config";
+// `dotenv/config` načítá pouze `.env`, ne `.env.local`. Musíme explicitně
+// specifikovat `.env.local`, což je standard pro lokální vývoj.
+import { config as loadEnv } from "dotenv";
+loadEnv({ path: ".env.local" });
+loadEnv({ path: ".env" }); // fallback (nižší priorita)
+
 import { runEtlJob } from "~/server/services/etl/jobs";
 import { logger } from "~/lib/logger";
 
