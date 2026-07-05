@@ -25,7 +25,7 @@ export async function classifyIntent(question: string): Promise<Intent> {
       prompt,
       schema: IntentSchema,
       temperature: 0.1,
-      maxTokens: 200,
+      maxOutputTokens: 200,
     });
     return object;
   } catch (err) {
