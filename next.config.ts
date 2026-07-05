@@ -3,8 +3,10 @@ import type { NextConfig } from "next";
 const config: NextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
-  serverActions: {
-    bodySizeLimit: "2mb",
+  experimental: {
+    serverActions: {
+      bodySizeLimit: "2mb",
+    },
   },
   typedRoutes: true,
   serverExternalPackages: [

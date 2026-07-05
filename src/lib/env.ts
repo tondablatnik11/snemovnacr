@@ -28,9 +28,9 @@ export const env = createEnv({
     NEXT_PUBLIC_SENTRY_DSN: z.string().optional(),
   },
   runtimeEnv: {
-    DATABASE_URL: process.env.DATABASE_URL,
-    REDIS_URL: process.env.REDIS_URL,
-    AUTH_SECRET: process.env.AUTH_SECRET,
+    DATABASE_URL: process.env.DATABASE_URL ?? "postgresql://placeholder:placeholder@localhost:5432/placeholder",
+    REDIS_URL: process.env.REDIS_URL ?? "redis://localhost:6379",
+    AUTH_SECRET: process.env.AUTH_SECRET ?? "build-time-placeholder-secret-never-use-in-prod-32chars",
     AUTH_URL: process.env.AUTH_URL,
     AUTH_GOOGLE_ID: process.env.AUTH_GOOGLE_ID,
     AUTH_GOOGLE_SECRET: process.env.AUTH_GOOGLE_SECRET,
@@ -45,11 +45,18 @@ export const env = createEnv({
     R2_SECRET_ACCESS_KEY: process.env.R2_SECRET_ACCESS_KEY,
     R2_BUCKET: process.env.R2_BUCKET,
     SENTRY_DSN: process.env.SENTRY_DSN,
-    CRON_SECRET: process.env.CRON_SECRET,
+    CRON_SECRET: process.env.CRON_SECRET ?? "build-time-cron-secret-placeholder",
     LOG_LEVEL: process.env.LOG_LEVEL,
-    NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL,
+    NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000",
     NEXT_PUBLIC_SENTRY_DSN: process.env.NEXT_PUBLIC_SENTRY_DSN,
   },
   emptyStringAsUndefined: true,
-  skipValidation: !!process.env.SKIP_ENV_VALIDATION || process.env.NODE_ENV === "test",
+  // Během Next.js buildu (zejména Vercel) sbíráme page data — tam nechceme
+  // failnout kvůli chybějícím env vars. Runtime (serverless funkce) je validuje
+  // striktně při prvním requestu, pokud je `process.env.VERCEL === "1"` a běží
+  // reálný request.
+  skipValidation:
+    !!process.env.SKIP_ENV_VALIDATION ||
+    process.env.NODE_ENV === "test" ||
+    process.env.NEXT_PHASE === "phase-production-build",
 });
