@@ -8,7 +8,7 @@ export default async function AnalyzyPage() {
 
   let divergence: Array<{ poslanec_id: number; jmeno: string; prijmeni: string; titul_pred: string | null; total: number; souhlas: number; nesouhlas: number; divergence_pct: number }> = [];
   try {
-    divergence = (await caller.hlasovani.divergence({ term, limit: 30 })) as typeof divergence;
+    divergence = (await caller.hlasovani.divergence({ term, limit: 30 })) as unknown as typeof divergence;
   } catch {
     // DB prázdná
   }
