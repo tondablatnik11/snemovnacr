@@ -35,7 +35,7 @@ export function ChatWindow() {
         )}
         {messages.map((m) => {
           const text = m.parts
-            .filter((p): p is { type: "text"; text: string; state?: string } => p.type === "text")
+            .filter((p): p is { type: "text"; text: string } => p.type === "text")
             .map((p) => p.text)
             .join("");
           return (
