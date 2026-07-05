@@ -1,8 +1,8 @@
-// AI chat — streaming s přímým fetch na NVIDIA NIM + Vercel AI SDK 5 (UI Messages)
-// Používáme streamUI z AI SDK 5 pro manuální streaming v UI Message formátu.
+// AI chat — streaming s NVIDIA NIM + Vercel AI SDK 6 (LanguageModelV3)
+// Používáme @ai-sdk/openai-compatible (V3), který je nyní kompatibilní s ai@6.x.
 
-import { streamText, type UIMessage, convertToModelMessages, createUIMessageStream } from "ai";
-import { openai } from "@ai-sdk/openai";
+import { streamText, type UIMessage, convertToModelMessages } from "ai";
+import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
 import { env } from "~/lib/env";
 import { retrieve, formatSourcesForPrompt } from "./rag";
 import { SYSTEM_PROMPT } from "./prompts";
@@ -14,12 +14,7 @@ export interface ChatParams {
 }
 
 /**
- * AI chat — implementujeme streaming přes AI SDK 5 createUIMessageStream.
- * Pro volání NVIDIA NIM používáme OpenAI provider (openai package), který
- * podporuje custom baseURL — kompatibilní s NVIDIA OpenAI-compatible API.
- *
- * Tím obcházíme @ai-sdk/openai-compatible (který má V3) a jsme kompatibilní
- * s ai@5.0.86 (LanguageModelV2).
+ * AI chat — streaming přes AI SDK 6 createOpenAICompatible + NVIDIA NIM.
  */
 export async function chatStream({ messages, skipRag }: ChatParams) {
   const lastUserMsg = [...messages].reverse().find((m) => m.role === "user");
@@ -43,14 +38,14 @@ export async function chatStream({ messages, skipRag }: ChatParams) {
     .replace("{context}", sources || "(žádný kontext)")
     .replace("{question}", question);
 
-  // OpenAI provider s custom baseURL — funguje s NVIDIA NIM OpenAI-compatible API
-  const nvidiaOpenAI = openai({
+  const nvidia = createOpenAICompatible({
+    name: "nvidia",
     baseURL: env.NVIDIA_BASE_URL,
     apiKey: env.NVIDIA_API_KEY ?? "no-key",
   });
 
   const result = streamText({
-    model: nvidiaOpenAI.chatModel(env.NVIDIA_CHAT_MODEL),
+    model: nvidia.chatModel(env.NVIDIA_CHAT_MODEL),
     system: systemMessage,
     messages: convertToModelMessages(messages),
     temperature: 0.2,
