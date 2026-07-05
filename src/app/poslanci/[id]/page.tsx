@@ -92,7 +92,7 @@ export default async function PoslanecDetailPage({ params }: { params: Promise<{
                 </tr>
               </thead>
               <tbody>
-                {(matrix as Array<{ id: number; datum: Date | null; nazev: string; vysledek: string; muj_hlas: string }>).map((row) => {
+                {(matrix as unknown as Array<{ id: number; datum: Date | null; nazev: string; vysledek: string; muj_hlas: string }>).map((row) => {
                   const v = decodeVote(row.muj_hlas);
                   return (
                     <tr key={row.id} className="border-t border-border hover:bg-muted/30">
