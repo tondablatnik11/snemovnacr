@@ -47,7 +47,7 @@ export async function chatStream({ messages, skipRag }: ChatParams) {
   const result = streamText({
     model: nvidia.chatModel(env.NVIDIA_CHAT_MODEL),
     system: systemMessage,
-    messages: convertToModelMessages(messages),
+    messages: await convertToModelMessages(messages),
     temperature: 0.2,
     maxOutputTokens: 1500,
     topP: 0.95,
