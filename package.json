@@ -51,7 +51,7 @@
     "iconv-lite": "0.6.3",
     "ioredis": "5.4.2",
     "lucide-react": "0.460.0",
-    "next": "15.5.4",
+    "next": "15.5.9",
     "next-auth": "5.0.0-beta.25",
     "pino": "9.5.0",
     "pino-pretty": "11.3.0",
