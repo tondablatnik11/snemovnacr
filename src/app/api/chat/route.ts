@@ -1,6 +1,9 @@
 import { streamText, type UIMessage } from "ai";
 import { chatStream } from "~/server/services/ai/chat";
 
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
 /**
  * AI SDK 5 chat endpoint.
  * Request body: { messages: UIMessage[] }

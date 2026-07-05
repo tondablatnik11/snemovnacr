@@ -2,6 +2,9 @@
 // Spouští se v 03:00 UTC
 
 import { NextResponse } from "next/server";
+
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 import { getQueue, QUEUE_NAMES, type EtlJobData } from "~/server/queue/client";
 import { env } from "~/lib/env";
 

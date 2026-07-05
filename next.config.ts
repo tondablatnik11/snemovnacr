@@ -3,13 +3,21 @@ import type { NextConfig } from "next";
 const config: NextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
-  experimental: {
-    serverActions: {
-      bodySizeLimit: "2mb",
-    },
-    typedRoutes: true,
+  serverActions: {
+    bodySizeLimit: "2mb",
   },
-  serverExternalPackages: ["postgres", "pg", "ioredis", "bullmq", "iconv-lite", "yauzl"],
+  typedRoutes: true,
+  serverExternalPackages: [
+    "postgres",
+    "pg",
+    "ioredis",
+    "bullmq",
+    "iconv-lite",
+    "yauzl",
+    "pino",
+    "pino-pretty",
+    "cheerio",
+  ],
   async headers() {
     return [
       {

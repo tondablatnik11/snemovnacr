@@ -37,10 +37,11 @@ export const peticeRouter = router({
         .where(eq(petice.slug, input.slug))
         .limit(1);
       if (!p) return null;
-      const [{ count }] = await ctx.db
+      const countRows = await ctx.db
         .select({ count: sql<number>`COUNT(*)::int` })
         .from(podpis)
         .where(and(eq(podpis.idPetice, p.id), eq(podpis.verified, true)));
+      const count = countRows[0]?.count ?? 0;
       return { ...p, signatureCount: count };
     }),
 
@@ -56,6 +57,7 @@ export const peticeRouter = router({
     )
     .mutation(async ({ ctx, input }) => {
       const slug = slugify(input.title);
+      const createdById = ctx.user.id as string;
       const [created] = await ctx.db
         .insert(petice)
         .values({
@@ -65,7 +67,7 @@ export const peticeRouter = router({
           cilovyPoslanecId: input.cilovyPoslanecId,
           cilovyTiskId: input.cilovyTiskId,
           cilovyPocet: input.cilovyPocet,
-          createdById: ctx.user.id,
+          createdById,
           stav: "ACTIVE",
         })
         .returning();

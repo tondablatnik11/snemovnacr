@@ -52,10 +52,18 @@ export function parseHlasyHtml(html: string, voteId: number): { idHlasovani: num
   // seskup po 4 (nebo 5) buňkách na řádek
   let i = 0;
   while (i + 3 < matches.length) {
-    const idText = stripHtml(matches[i]![1]);
-    const nameText = stripHtml(matches[i + 1]![1]);
-    const clubText = stripHtml(matches[i + 2]![1]);
-    const resultText = stripHtml(matches[i + 3]![1]);
+    const idMatch = matches[i]?.[1];
+    const nameMatch = matches[i + 1]?.[1];
+    const clubMatch = matches[i + 2]?.[1];
+    const resultMatch = matches[i + 3]?.[1];
+    if (idMatch === undefined || nameMatch === undefined || clubMatch === undefined || resultMatch === undefined) {
+      i += 4;
+      continue;
+    }
+    const idText = stripHtml(idMatch);
+    const nameText = stripHtml(nameMatch);
+    const clubText = stripHtml(clubMatch);
+    const resultText = stripHtml(resultMatch);
 
     const idNum = parseInt(idText, 10);
     if (!Number.isNaN(idNum) && /^[ABCDF@MWK]$/.test(resultText)) {

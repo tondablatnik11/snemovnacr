@@ -6,6 +6,9 @@ import { coalition } from "~/server/db/schema/psp";
 import { getOptionalUser } from "~/server/auth/perms";
 import { eq, and } from "drizzle-orm";
 
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
 const schema = z.object({
   updates: z.array(z.object({ idOrgan: z.number().int(), role: z.enum(["VLADA", "OPOZICE", "NEZARAZENO"]) })),
 });

@@ -71,7 +71,8 @@ export async function findContestedVotes(since: Date, limit = 10): Promise<Conte
  * Volá se po novém hlasování nebo změně stavu tisku.
  */
 export async function dispatchWatchAlerts(targetType: string, targetId: string, payload: Record<string, unknown>) {
-  const { sledovane, notifikace, users } = await import("~/server/db/schema/participace");
+  const { sledovane, notifikace } = await import("~/server/db/schema/participace");
+  const { users } = await import("~/server/db/schema/auth");
   const subscribers = await db
     .select()
     .from(sledovane)

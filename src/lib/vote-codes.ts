@@ -12,8 +12,7 @@ export type VoteResult =
   | { code: "@"; label: "nepřihlášen"; tone: "absent" }
   | { code: "M"; label: "omluven"; tone: "absent" }
   | { code: "W"; label: "před složením slibu"; tone: "absent" }
-  | { code: "K"; label: "omluven-zdržel (legacy)"; tone: "abstain" }
-  | { code: "@"; label: "neznámý kód"; tone: "absent" };
+  | { code: "K"; label: "omluven-zdržel (legacy)"; tone: "abstain" };
 
 export function decodeVote(raw: string | null | undefined): VoteResult {
   const code = (raw ?? "").trim().toUpperCase() as VoteCode;
@@ -36,7 +35,9 @@ export function decodeVote(raw: string | null | undefined): VoteResult {
     case "K":
       return { code, label: "omluven-zdržel (legacy)", tone: "abstain" };
     default:
-      return { code: "@", label: "neznámý kód", tone: "absent" };
+      // Fallback: neplatný kód — mapujeme na "@" (nepřihlášen) jako terminologicky
+      // nejpřesnější ("neznámý" nelze rozlišit od skutečně nepřihlášeného poslance).
+      return { code: "@", label: "nepřihlášen", tone: "absent" };
   }
 }
 
@@ -70,4 +71,5 @@ export const VOTE_CODE_CLASS: Record<string, string> = {
   M: "bg-vote-omluven text-white",
   W: "bg-vote-omluven text-white",
   K: "bg-vote-zdrzel text-black",
+  "?": "bg-muted text-white",
 };

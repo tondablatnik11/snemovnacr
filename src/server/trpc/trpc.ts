@@ -36,23 +36,31 @@ const loggerMiddleware = middleware(async ({ path, type, next }) => {
 
 export const loggedProcedure = t.procedure.use(loggerMiddleware);
 
-const authedMiddleware = middleware(async ({ ctx, next }) => {
+/**
+ * Middleware zúží typ `ctx.user` na non-null AuthorizeUser.
+ * Chráněné procedury pak mohou přímo číst `ctx.user.id` bez `!`/optional chain.
+ */
+type AuthorizeUser = NonNullable<Context["user"]>;
+
+const authedMiddleware = middleware<{ user: AuthorizeUser }>(async ({ ctx, next }) => {
   if (!ctx.user) {
     throw new TRPCError({ code: "UNAUTHORIZED" });
   }
-  return next({ ctx: { ...ctx, user: ctx.user } });
+  const user = ctx.user as AuthorizeUser;
+  return next({ ctx: { ...ctx, user } });
 });
 
 export const protectedProcedure = loggedProcedure.use(authedMiddleware);
 
 const roleMiddleware = (allowed: ("user" | "curator" | "admin")[]) =>
-  middleware(async ({ ctx, next }) => {
+  middleware<{ user: AuthorizeUser }>(async ({ ctx, next }) => {
     if (!ctx.user) throw new TRPCError({ code: "UNAUTHORIZED" });
     const role = (ctx.user as { role?: string }).role ?? "user";
     if (!allowed.includes(role as "user" | "curator" | "admin")) {
       throw new TRPCError({ code: "FORBIDDEN" });
     }
-    return next({ ctx: { ...ctx, user: ctx.user } });
+    const user = ctx.user as AuthorizeUser;
+    return next({ ctx: { ...ctx, user } });
   });
 
 export const curatorProcedure = loggedProcedure.use(roleMiddleware(["curator", "admin"]));

@@ -2,6 +2,9 @@
 // Spouští se v 04:00 UTC
 
 import { NextResponse } from "next/server";
+
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 import { getQueue, QUEUE_NAMES, type EmbedJobData } from "~/server/queue/client";
 import { db } from "~/server/db";
 import { hlasovani, tisk, rec } from "~/server/db/schema/psp";
