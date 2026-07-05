@@ -1,0 +1,8 @@
+{
+  "$schema": "https://json.schemastore.org/vercel.json",
+  "crons": [
+    { "path": "/api/cron/etl-poslanci", "schedule": "0 2 * * *" },
+    { "path": "/api/cron/etl-hlasovani", "schedule": "0 3 * * *" },
+    { "path": "/api/cron/embed", "schedule": "0 4 * * *" }
+  ]
+}
