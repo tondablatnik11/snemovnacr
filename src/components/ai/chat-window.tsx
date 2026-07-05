@@ -1,6 +1,7 @@
 "use client";
 
 import { useChat } from "@ai-sdk/react";
+import { DefaultChatTransport } from "ai";
 import { useRef, useEffect, useState } from "react";
 import { Send } from "lucide-react";
 import { cn } from "~/lib/utils";
@@ -8,12 +9,12 @@ import { cn } from "~/lib/utils";
 /**
  * AI SDK 5 kompatibilní chat window.
  * - `messages` je `UIMessage[]` s `parts` polem
- * - input se spravuje lokálně přes useState (useChat v AI SDK 5 již
- *   neobsahuje input/handleInputChange/handleSubmit)
+ * - input se spravuje lokálně přes useState
+ * - endpoint se nastavuje přes `transport: new DefaultChatTransport({ api: ... })`
  */
 export function ChatWindow() {
   const { messages, sendMessage, status } = useChat({
-    api: "/api/chat",
+    transport: new DefaultChatTransport({ api: "/api/chat" }),
   });
   const [input, setInput] = useState("");
 
