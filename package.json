@@ -41,7 +41,6 @@
     "@trpc/server": "^11.0.0",
     "@uiw/react-md-editor": "^4.0.0",
     "ai": "^4.0.0",
-    "ai-sdk-ollama": "^0.0.2",
     "auth0": "^4.0.0",
     "axios": "^1.7.0",
     "bullmq": "^5.21.0",
