@@ -13,6 +13,7 @@ export interface RagSource {
   snippet: string;
   score: number;
   url?: string;
+  [key: string]: unknown;
 }
 
 export interface RagResult {
