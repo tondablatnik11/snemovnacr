@@ -12,7 +12,8 @@ export type VoteResult =
   | { code: "@"; label: "nepřihlášen"; tone: "absent" }
   | { code: "M"; label: "omluven"; tone: "absent" }
   | { code: "W"; label: "před složením slibu"; tone: "absent" }
-  | { code: "K"; label: "omluven-zdržel (legacy)"; tone: "abstain" };
+  | { code: "K"; label: "omluven-zdržel (legacy)"; tone: "abstain" }
+  | { code: "@"; label: "neznámý kód"; tone: "absent" };
 
 export function decodeVote(raw: string | null | undefined): VoteResult {
   const code = (raw ?? "").trim().toUpperCase() as VoteCode;
