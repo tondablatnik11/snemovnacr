@@ -31,6 +31,10 @@ const client =
     max: isProd ? 10 : 4,
     idle_timeout: 20,
     connect_timeout: 10,
+    // PgBouncer transaction mode (Supabase pooler port 6543) nepodporuje
+    // prepared statements, které postgres-js posílá defaultně. Bez tohoto
+    // flagu dostáváme ECONNREFUSED nebo "prepared statement does not exist".
+    no_prepare: true,
     onnotice: (n) => logger.debug({ notice: n }, "pg notice"),
   });
 
