@@ -1,4 +1,17 @@
-import "server-only";
+// Sdílený DB init. Importuje se jak z Next.js RSC, tak z ETL/worker skriptů.
+// "server-only" je Next.js marker, který v CLI skriptech (`tsx scripts/*.ts`)
+// vyhazuje chybu — proto ho načítáme podmíněně: pouze v Next.js runtime.
+
+const isCliRun =
+  typeof process !== "undefined" &&
+  process.argv[1] !== undefined &&
+  /\.tsx?$/.test(process.argv[1]) &&
+  !process.argv[1].includes(".next");
+
+if (!isCliRun) {
+  await import("server-only");
+}
+
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
 import { env } from "~/lib/env";

@@ -30,32 +30,53 @@ export async function loadPoslanci(snapshot: DownloadedZip) {
   const files = snapshot.files;
   logger.info("→ Load poslanci: start");
 
-  // ----- 1) volebniObdobi (vytvoř z odvozených dat) -----
+  // ----- 1) volebniObdobi (z odvozených dat — POUZE z poslanec.unl) -----
+  // Dříve jsme iterovali VŠECHNY soubory a brali row[0], což způsobilo že
+  // id_obdobi bylo smíchané s id_osoba (např. 7109). Nyní parsujeme jen
+  // poslanec.unl, kde formát je: id_poslanec|id_osoba|id_obdobi|...
   const obdobiFromFiles = new Set<number>();
-  for (const rows of Object.values(files)) {
-    for (const row of rows) {
-      const obdobi = parseInt(row[0] ?? "", 10);
-      if (!Number.isNaN(obdobi) && obdobi > 0) obdobiFromFiles.add(obdobi);
-    }
+  const poslanecRowsForObdobi = files["poslanec.unl"] ?? [];
+  for (const row of poslanecRowsForObdobi) {
+    const obdobi = parseInt(row[2] ?? "", 10);
+    if (!Number.isNaN(obdobi) && obdobi > 0 && obdobi <= 20) obdobiFromFiles.add(obdobi);
   }
-  // naplň z environment/data — defaultně všechna
+  // Hardcoded fallback (10 období 1993–2025) pro případ že poslanec.unl
+  // ještě nemá žádné řádky.
+  const defaultObdobi = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+  for (const id of defaultObdobi) obdobiFromFiles.add(id);
+
+  // Mapování id_obdobi → roky (dle README: term 1 → 1993, term 10 → 2025)
+  const OBDOBI_YEARS: Record<number, number> = {
+    1: 1993, 2: 1996, 3: 1998, 4: 2002, 5: 2006,
+    6: 2010, 7: 2013, 8: 2017, 9: 2021, 10: 2025,
+  };
+
   const obdobiRows = [...obdobiFromFiles].sort((a, b) => a - b).map((id) => ({
     id,
     cislo: id,
     nazev: `${id}. volební období`,
-    datumOd: `${1900 + id * 4}-01-01`, // placeholder — reálně z dat
+    datumOd: `${OBDOBI_YEARS[id] ?? 1990 + id * 4}-01-01`,
     datumDo: null as string | null,
     aktualni: id === 10,
   }));
 
   if (obdobiRows.length > 0) {
-    await db
-      .insert(volebniObdobi)
-      .values(obdobiRows)
-      .onConflictDoUpdate({
-        target: volebniObdobi.id,
-        set: { aktualni: sql`excluded.aktualni` },
-      });
+    try {
+      await db
+        .insert(volebniObdobi)
+        .values(obdobiRows)
+        .onConflictDoUpdate({
+          target: volebniObdobi.id,
+          set: { aktualni: sql`excluded.aktualni` },
+        });
+      logger.info({ count: obdobiRows.length }, "✓ Volební období");
+    } catch (err) {
+      logger.error(
+        { err: String(err), sample: obdobiRows[0] },
+        "× Volební období selhala"
+      );
+      throw err;
+    }
   }
 
   // ----- 2) osoba (lidé — unikátní) -----
