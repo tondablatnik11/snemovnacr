@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { PetitionIcon } from "lucide-react";
+import { FileSignature } from "lucide-react";
 import { getServerCaller } from "~/server/trpc/caller";
 import { PetitionSignForm } from "~/components/petice/petition-sign-form";
 
@@ -15,7 +15,7 @@ export default async function PeticeDetailPage({ params }: { params: Promise<{ s
     <div className="container max-w-3xl py-8">
       <header className="mb-6">
         <h1 className="text-3xl font-bold flex items-center gap-2 mb-2">
-          <PetitionIcon className="h-7 w-7 text-primary" />
+          <FileSignature className="h-7 w-7 text-primary" />
           {p.title}
         </h1>
         <div className="text-sm text-muted-foreground">

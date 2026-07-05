@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { PetitionIcon, ArrowRight } from "lucide-react";
+import { FileSignature, ArrowRight } from "lucide-react";
 import { getServerCaller } from "~/server/trpc/caller";
 
 export default async function PeticePage() {
@@ -10,7 +10,7 @@ export default async function PeticePage() {
     <div className="container py-8">
       <header className="mb-8">
         <h1 className="text-3xl font-bold flex items-center gap-2">
-          <PetitionIcon className="h-7 w-7 text-primary" />
+          <FileSignature className="h-7 w-7 text-primary" />
           Petice
         </h1>
         <p className="text-muted-foreground mt-1">
