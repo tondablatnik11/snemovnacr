@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Bell, BellOff } from "lucide-react";
 import { api } from "~/trpc/client";
 
@@ -13,15 +13,18 @@ export function WatchToggle({
 }) {
   const [watching, setWatching] = useState(false);
   const utils = api.useUtils();
-  const check = api.sledovane.isWatching.useQuery({ targetType, targetId }, {
-    onSuccess: (data) => setWatching(data),
-  });
+  const check = api.sledovane.isWatching.useQuery({ targetType, targetId });
   const toggle = api.sledovane.toggle.useMutation({
     onSuccess: (data) => {
       setWatching(data.watching);
       utils.sledovane.isWatching.invalidate({ targetType, targetId });
     },
   });
+
+  // Sync local state with query result
+  useEffect(() => {
+    if (check.data !== undefined) setWatching(check.data);
+  }, [check.data]);
 
   if (check.isLoading) return null;
 
