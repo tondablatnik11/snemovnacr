@@ -1,19 +1,21 @@
 "use client";
 
 import { useChat } from "@ai-sdk/react";
-import { useRef, useEffect } from "react";
+import { useRef, useEffect, useState } from "react";
 import { Send } from "lucide-react";
 import { cn } from "~/lib/utils";
 
 /**
  * AI SDK 5 kompatibilní chat window.
- * - `messages` je `UIMessage[]` s `parts` polem (místo `content`)
- * - text extraction: `m.parts.filter(p => p.type === 'text').map(p => p.text).join('')`
+ * - `messages` je `UIMessage[]` s `parts` polem
+ * - input se spravuje lokálně přes useState (useChat v AI SDK 5 již
+ *   neobsahuje input/handleInputChange/handleSubmit)
  */
 export function ChatWindow() {
-  const { messages, input, handleInputChange, handleSubmit, status } = useChat({
+  const { messages, sendMessage, status } = useChat({
     api: "/api/chat",
   });
+  const [input, setInput] = useState("");
 
   const isLoading = status === "submitted" || status === "streaming";
 
@@ -67,10 +69,18 @@ export function ChatWindow() {
         )}
       </div>
 
-      <form onSubmit={handleSubmit} className="border-t border-border p-3 flex gap-2">
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          if (!input.trim() || isLoading) return;
+          sendMessage({ text: input });
+          setInput("");
+        }}
+        className="border-t border-border p-3 flex gap-2"
+      >
         <input
           value={input}
-          onChange={handleInputChange}
+          onChange={(e) => setInput(e.target.value)}
           placeholder="Zeptejte se…"
           className="flex-1 px-3 py-2 rounded-md border border-border bg-background focus:outline-none focus:ring-2 focus:ring-ring text-sm"
         />
