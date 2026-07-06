@@ -2,7 +2,7 @@
 
 import { Lightbulb } from "lucide-react";
 
-export function SuggestedQuestions({ questions }: { questions: string[] }) {
+export function SuggestedQuestions({ questions, onSelect }: { questions: readonly string[]; onSelect?: (q: string) => void }) {
   return (
     <div className="mb-4 space-y-2">
       <div className="flex items-center gap-2 text-xs text-muted-foreground">
@@ -14,7 +14,8 @@ export function SuggestedQuestions({ questions }: { questions: string[] }) {
           <button
             key={q}
             type="button"
-            className="px-3 py-1.5 text-xs rounded-full border border-border bg-muted/50 hover:bg-muted transition-colors text-left"
+            onClick={() => onSelect?.(q)}
+            className="px-3 py-1.5 text-xs rounded-full border border-border bg-muted/50 hover:bg-muted hover:border-primary/30 transition-colors text-left"
           >
             {q}
           </button>

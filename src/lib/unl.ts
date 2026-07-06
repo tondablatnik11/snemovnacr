@@ -43,15 +43,28 @@ export function parseUnlLine(line: string): UnlRow {
   while (i < line.length) {
     const c = line[i]!;
 
-    if (c === "\\" && i + 3 < line.length) {
-      // Escape \NNN (octal, max 3 číslice)
-      const m = /^\\([0-7]{1,3})/.exec(line.slice(i));
-      if (m && m[1]) {
-        const code = parseInt(m[1], 8);
+    if (c === "\\") {
+      // Escape \NNN (octal, max 3 číslice, 0–7). Musí být POUZE octal cifry.
+      // Speciální escape sekvence: \\ → backslash, \| → pipe (kdyby se vyskytl).
+      // Pokud \\ nenásleduje platný escape, je emitován jako doslovný znak
+      // (DOS-style fallback — chrání proti neočekávaným datům).
+      const slice = line.slice(i + 1);
+      const octMatch = /^([0-7]{1,3})/.exec(slice);
+      if (octMatch && octMatch[1]) {
+        const code = parseInt(octMatch[1], 8);
         buf += String.fromCharCode(code);
-        i += m[0].length;
+        i += 1 + octMatch[1].length;
         continue;
       }
+      if (slice.startsWith("\\")) {
+        buf += "\\";
+        i += 2;
+        continue;
+      }
+      // Fallback: \\ není platný escape — emituj \\ a posuň se o 1.
+      buf += "\\";
+      i++;
+      continue;
     }
 
     if (c === "|") {

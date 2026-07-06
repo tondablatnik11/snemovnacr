@@ -15,3 +15,6 @@ playwright-report
 test-results
 .vercel
 drizzle/.snapshots
+tsconfig.tsbuildinfo
+test-pg.js
+test-pg.mjs

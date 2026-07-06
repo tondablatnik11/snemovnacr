@@ -1,6 +1,7 @@
 // BullMQ + Redis client
 
 import { Queue, QueueEvents, type ConnectionOptions } from "bullmq";
+import IORedis from "ioredis";
 import { env } from "~/lib/env";
 
 const connection: ConnectionOptions = {
@@ -27,6 +28,24 @@ export function getQueue(name: (typeof QUEUE_NAMES)[keyof typeof QUEUE_NAMES]): 
 
 export function getQueueEvents(name: (typeof QUEUE_NAMES)[keyof typeof QUEUE_NAMES]) {
   return new QueueEvents(name, { connection });
+}
+
+/**
+ * Lehký ping na Redis — pro health check endpoint.
+ * Vytváří krátkodobé spojení, aby nezatěžoval fond workerů.
+ */
+export async function ioredisPing(): Promise<void> {
+  const client = new IORedis(env.REDIS_URL, {
+    maxRetriesPerRequest: 1,
+    connectTimeout: 3_000,
+    lazyConnect: true,
+  });
+  try {
+    await client.connect();
+    await client.ping();
+  } finally {
+    client.disconnect();
+  }
 }
 
 // Job typy

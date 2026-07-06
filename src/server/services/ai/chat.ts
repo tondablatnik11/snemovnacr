@@ -14,15 +14,23 @@ export interface ChatParams {
 }
 
 /**
+ * Extrahuje text z poslední user zprávy (AI SDK 6 ukládá obsah v `parts`).
+ */
+function extractLastUserText(messages: UIMessage[]): string {
+  const lastUserMsg = [...messages].reverse().find((m) => m.role === "user");
+  if (!lastUserMsg) return "";
+  return lastUserMsg.parts
+    .filter((p): p is { type: "text"; text: string } => p.type === "text")
+    .map((p) => p.text)
+    .join("");
+}
+
+/**
  * AI chat — streaming přes AI SDK 6 createOpenAICompatible + NVIDIA NIM.
+ * Pipeline: extract dotaz → RAG retrieval → compose prompt → streamText.
  */
 export async function chatStream({ messages, skipRag }: ChatParams) {
-  const lastUserMsg = [...messages].reverse().find((m) => m.role === "user");
-  const question =
-    lastUserMsg?.parts
-      .filter((p): p is { type: "text"; text: string } => p.type === "text")
-      .map((p) => p.text)
-      .join("") ?? "";
+  const question = extractLastUserText(messages);
 
   let sources = "";
   if (!skipRag && question) {

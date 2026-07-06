@@ -2,12 +2,13 @@
 // DB-dependent kontrola se děje v RSC/route handlerech přes getOptionalUser().
 
 import { getToken } from "next-auth/jwt";
-import { NextResponse } from "next/server";
+import { NextResponse, type NextRequest } from "next/server";
 
 const protectedPaths = ["/dashboard", "/admin"];
 
-export default async function middleware(req: Request) {
-  const url = new URL(req.url);
+export default async function middleware(req: NextRequest) {
+  const url = req.url ? new URL(req.url) : null;
+  if (!url) return NextResponse.next();
   const { pathname } = url;
 
   const isProtected = protectedPaths.some((p) => pathname.startsWith(p));
@@ -16,7 +17,7 @@ export default async function middleware(req: Request) {
   const token = await getToken({
     req: req as never,
     secret: process.env.AUTH_SECRET,
-    // SalteR z procesu (Auth.js v5 ho odvozuje z NEXTAUTH_URL / AUTH_URL)
+    // Sůl z procesu (Auth.js v5 ho odvozuje z NEXTAUTH_URL / AUTH_URL)
     salt: "authjs.session-token",
   });
 
@@ -34,9 +35,12 @@ export default async function middleware(req: Request) {
     }
   }
 
-  return NextResponse.next();
+  // Bezpečnostní hlavičky pro všechny chráněné stránky
+  const response = NextResponse.next();
+  response.headers.set("X-Protected-By", "middleware");
+  return response;
 }
 
 export const config = {
-  matcher: ["/((?!api|_next/static|_next/image|favicon.ico).*)"],
+  matcher: ["/((?!api|_next/static|_next/image|favicon.ico|sitemap.xml|robots.txt).*)"],
 };
