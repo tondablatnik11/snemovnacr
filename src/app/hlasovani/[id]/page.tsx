@@ -26,18 +26,28 @@ export async function generateMetadata({
   const baseUrl = env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
   const pro = detail.pro ?? 0;
   const proti = detail.proti ?? 0;
+  const zdrzel = detail.zdrzel ?? 0;
+  const dateStr = detail.datum ? new Date(detail.datum).toLocaleDateString("cs-CZ") : "";
+  const ogParams = new URLSearchParams({
+    title: detail.nazev,
+    pro: String(pro),
+    proti: String(proti),
+    zdrzel: String(zdrzel),
+    date: dateStr,
+    badge: detail.idSchuze ? `${detail.idSchuze}. schůze` : "Hlasování",
+  });
   return {
     title: detail.nazev.length > 60 ? detail.nazev.slice(0, 57) + "…" : detail.nazev,
-    description: `Výsledek hlasování: ${pro} pro, ${proti} proti. ${detail.datum ? new Date(detail.datum).toLocaleDateString("cs-CZ") : ""}`,
+    description: `Výsledek hlasování: ${pro} pro, ${proti} proti. ${dateStr}`,
     openGraph: {
       title: `${detail.nazev.slice(0, 60)} · Sněmovna ČR`,
-      description: `${pro} pro · ${proti} proti${detail.zdrzel ? ` · ${detail.zdrzel} zdržel` : ""}`,
+      description: `${pro} pro · ${proti} proti${zdrzel ? ` · ${zdrzel} zdržel` : ""}`,
       type: "article",
-      images: [`${baseUrl}/api/og/hlasovani/${id}`],
+      images: [`${baseUrl}/api/og/hlasovani/${id}?${ogParams.toString()}`],
     },
     twitter: {
       card: "summary_large_image",
-      images: [`${baseUrl}/api/og/hlasovani/${id}`],
+      images: [`${baseUrl}/api/og/hlasovani/${id}?${ogParams.toString()}`],
     },
   };
 }

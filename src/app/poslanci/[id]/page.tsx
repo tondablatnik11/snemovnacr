@@ -24,6 +24,12 @@ export async function generateMetadata({
 
   const name = formatFullName(detail);
   const baseUrl = env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+  const club = detail.kluby[0]?.nazev ?? "";
+  const ogParams = new URLSearchParams({
+    name,
+    club,
+    term: detail.obdobiNazev,
+  });
   return {
     title: `${name} — ${detail.obdobiNazev}`,
     description: `Profil poslance ${name} (${detail.obdobiNazev}). Hlasovací historie, kluby, kontakt.`,
@@ -31,12 +37,12 @@ export async function generateMetadata({
       title: `${name} · Sněmovna ČR`,
       description: `Profil poslance ${name} — hlasovací historie a kluby.`,
       type: "profile",
-      images: [`${baseUrl}/api/og/poslanci/${id}`],
+      images: [`${baseUrl}/api/og/poslanci/${id}?${ogParams.toString()}`],
     },
     twitter: {
       card: "summary_large_image",
       title: `${name} · Sněmovna ČR`,
-      images: [`${baseUrl}/api/og/poslanci/${id}`],
+      images: [`${baseUrl}/api/og/poslanci/${id}?${ogParams.toString()}`],
     },
   };
 }

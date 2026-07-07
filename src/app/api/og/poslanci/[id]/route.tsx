@@ -1,28 +1,19 @@
 // Dynamic OG image pro detail poslance.
+// Edge runtime — data z URL search params (metadata zajišťuje Node fetch).
+
 import { generateOGImage } from "~/app/og/dynamic-image";
-import { getServerCaller } from "~/server/trpc/caller";
-import { formatFullName } from "~/lib/format";
 
 export const runtime = "edge";
 
-export async function GET(
-  _req: Request,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  const { id } = await params;
-  const caller = await getServerCaller();
-  const detail = await caller.poslanci.detail({ id: parseInt(id, 10) });
-
-  if (!detail) {
-    return generateOGImage({
-      title: "Poslanec nenalezen",
-      badge: "Sněmovna ČR",
-    });
-  }
+export async function GET(req: Request) {
+  const url = new URL(req.url);
+  const name = url.searchParams.get("name") ?? "Poslanec";
+  const club = url.searchParams.get("club") ?? "";
+  const term = url.searchParams.get("term") ?? "Sněmovna ČR";
 
   return generateOGImage({
-    title: formatFullName(detail),
-    subtitle: detail.kluby[0]?.nazev,
-    badge: detail.obdobiNazev,
+    title: name,
+    subtitle: club || undefined,
+    badge: term,
   });
 }

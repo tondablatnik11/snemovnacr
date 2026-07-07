@@ -22,17 +22,26 @@ export async function generateMetadata({
   if (!detail) return { title: "Tisk nenalezen" };
 
   const baseUrl = env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+  const ogParams = new URLSearchParams({
+    title: detail.nazev,
+    subtitle: `Tisk č. ${formatTiskId(detail.cislo, detail.cisloZa)}${
+      detail.druh ? ` · ${detail.druh.replace("_", " ")}` : ""
+    }`,
+    badge: detail.datumDoruceni
+      ? `Doručeno ${new Date(detail.datumDoruceni).toLocaleDateString("cs-CZ")}`
+      : "Sněmovní tisk",
+  });
   return {
     title: `Tisk č. ${formatTiskId(detail.cislo, detail.cisloZa)} — ${detail.nazev.slice(0, 60)}`,
     description: detail.nazev,
     openGraph: {
       title: `${detail.nazev.slice(0, 60)} · Sněmovna ČR`,
       type: "article",
-      images: [`${baseUrl}/api/og/tisk/${id}`],
+      images: [`${baseUrl}/api/og/tisk/${id}?${ogParams.toString()}`],
     },
     twitter: {
       card: "summary_large_image",
-      images: [`${baseUrl}/api/og/tisk/${id}`],
+      images: [`${baseUrl}/api/og/tisk/${id}?${ogParams.toString()}`],
     },
   };
 }
