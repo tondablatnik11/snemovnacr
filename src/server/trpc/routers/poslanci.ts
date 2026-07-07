@@ -1,31 +1,23 @@
-// tRPC router: poslanci
+// tRPC router: poslanci — typově bezpečné, žádné `as unknown as`.
 import { z } from "zod";
 import { router, publicProcedure } from "../trpc";
-import { poslanec, osoba, organ, volebniObdobi, zarazeni } from "~/server/db/schema/psp";
-import { coalition } from "~/server/db/schema/psp";
-import { and, desc, eq, ilike, or, sql, inArray } from "drizzle-orm";
+import { poslanec, osoba, organ, volebniObdobi, zarazeni, coalition } from "~/server/db/schema/psp";
+import { and, desc, eq, ilike, or, sql } from "drizzle-orm";
+import { paginationSchema, offsetFrom } from "../helpers";
 
 export const poslanciRouter = router({
   list: publicProcedure
     .input(
-      z.object({
+      paginationSchema.extend({
         term: z.number().int().default(10),
         search: z.string().optional(),
         clubId: z.number().int().optional(),
-        page: z.number().int().min(1).default(1),
-        pageSize: z.number().int().min(1).max(100).default(24),
       })
     )
     .query(async ({ ctx, input }) => {
-      const offset = (input.page - 1) * input.pageSize;
+      const offset = offsetFrom(input);
 
-      // Najdi ID poslanců v daném období, případně klubu
-      const baseWhere = and(
-        eq(poslanec.idObdobi, input.term),
-        input.clubId ? eq(zarazeni.idOf, input.clubId) : sql`true`
-      );
-
-      const rows = await ctx.db
+      return ctx.db
         .select({
           id: poslanec.id,
           idOsoba: poslanec.idOsoba,
@@ -39,10 +31,14 @@ export const poslanciRouter = router({
         })
         .from(poslanec)
         .innerJoin(osoba, eq(osoba.id, poslanec.idOsoba))
-        .leftJoin(zarazeni, and(eq(zarazeni.idOsoba, poslanec.idOsoba), eq(zarazeni.clFunkce, 0)))
+        .leftJoin(
+          zarazeni,
+          and(eq(zarazeni.idOsoba, poslanec.idOsoba), eq(zarazeni.clFunkce, 0))
+        )
         .where(
           and(
-            baseWhere,
+            eq(poslanec.idObdobi, input.term),
+            input.clubId ? eq(zarazeni.idOf, input.clubId) : sql`true`,
             input.search
               ? or(
                   ilike(osoba.prijmeni, `%${input.search}%`),
@@ -54,8 +50,6 @@ export const poslanciRouter = router({
         .orderBy(desc(poslanec.idOsoba))
         .limit(input.pageSize)
         .offset(offset);
-
-      return rows;
     }),
 
   detail: publicProcedure
@@ -86,7 +80,6 @@ export const poslanciRouter = router({
 
       if (!p) return null;
 
-      // Kluby (přes zarazeni → organ)
       const kluby = await ctx.db
         .select({
           idOrgan: organ.id,
@@ -103,20 +96,6 @@ export const poslanciRouter = router({
         .where(and(eq(zarazeni.idOsoba, p.idOsoba), eq(zarazeni.clFunkce, 0)));
 
       return { ...p, kluby };
-    }),
-
-  /** Hlasovací matice poslance — agregace posledních N hlasování */
-  votingMatrix: publicProcedure
-    .input(z.object({ id: z.number().int(), limit: z.number().int().min(10).max(200).default(50) }))
-    .query(async ({ ctx, input }) => {
-      return ctx.db.execute(
-        sql`SELECT h.id, h.datum, h.nazev, h.vysledek, hp.vysledek AS muj_hlas
-            FROM hlasovani_poslanec hp
-            INNER JOIN hlasovani h ON h.id = hp.id_hlasovani
-            WHERE hp.id_poslanec = ${input.id}
-            ORDER BY h.datum DESC NULLS LAST
-            LIMIT ${input.limit}`
-      );
     }),
 
   currentTerm: publicProcedure.query(async ({ ctx }) => {

@@ -1,31 +1,31 @@
-// tRPC router: hlasování
+// tRPC router: hlasování — typově bezpečné, žádné `as unknown as`.
 import { z } from "zod";
 import { router, publicProcedure } from "../trpc";
-import { hlasovani, hlasovaniPoslanec, poslanec, osoba, volebniObdobi, schuze, coalition } from "~/server/db/schema/psp";
+import { hlasovani, hlasovaniPoslanec, poslanec, osoba, schuze } from "~/server/db/schema/psp";
 import { and, desc, eq, sql, gte, lte } from "drizzle-orm";
+import { paginationSchema, offsetFrom } from "../helpers";
+import type { DivergenceRowRaw, HlasovaniDetailRow, VotingMatrixRow } from "~/server/db/types";
 
 export const hlasovaniRouter = router({
   list: publicProcedure
     .input(
-      z.object({
+      paginationSchema.extend({
         term: z.number().int().default(10),
         from: z.string().optional(),
         to: z.string().optional(),
         search: z.string().optional(),
-        page: z.number().int().min(1).default(1),
-        pageSize: z.number().int().min(1).max(50).default(20),
       })
     )
     .query(async ({ ctx, input }) => {
-      const offset = (input.page - 1) * input.pageSize;
+      const offset = offsetFrom(input);
       const where = and(
         eq(hlasovani.idObdobi, input.term),
         input.from ? gte(hlasovani.datum, new Date(input.from)) : sql`true`,
         input.to ? lte(hlasovani.datum, new Date(input.to)) : sql`true`,
-        input.search ? sql`h.nazev ILIKE ${`%${input.search}%`}` : sql`true`
+        input.search ? sql`${hlasovani.nazev} ILIKE ${`%${input.search}%`}` : sql`true`
       );
 
-      const rows = await ctx.db
+      return ctx.db
         .select({
           id: hlasovani.id,
           nazev: hlasovani.nazev,
@@ -44,8 +44,6 @@ export const hlasovaniRouter = router({
         .orderBy(desc(hlasovani.datum))
         .limit(input.pageSize)
         .offset(offset);
-
-      return rows;
     }),
 
   detail: publicProcedure
@@ -59,7 +57,7 @@ export const hlasovaniRouter = router({
       if (!h) return null;
 
       // Všichni poslanci + jak hlasovali (včetně klubu a koaliční role)
-      const rows = await ctx.db.execute(sql`
+      const rows = await ctx.db.execute<HlasovaniDetailRow>(sql`
         SELECT
           p.id AS poslanec_id,
           o.jmeno, o.prijmeni, o.titul_pred, o.titul_za,
@@ -85,8 +83,7 @@ export const hlasovaniRouter = router({
   divergence: publicProcedure
     .input(z.object({ term: z.number().int().default(10), limit: z.number().int().min(1).max(100).default(20) }))
     .query(async ({ ctx, input }) => {
-      // Počítá: pro každého poslance X hlasování: poměr (kolikrát hlasoval PRO když koalice PRO) atd.
-      return ctx.db.execute(sql`
+      const rows = await ctx.db.execute<DivergenceRowRaw>(sql`
         WITH koalice_votes AS (
           SELECT hp.id_hlasovani, hp.vysledek
           FROM hlasovani_poslanec hp
@@ -127,5 +124,25 @@ export const hlasovaniRouter = router({
         ORDER BY divergence_pct DESC NULLS LAST
         LIMIT ${input.limit}
       `);
+      return rows;
+    }),
+
+  /** Voting matrix pro jednoho poslance — používané na detail stránce. */
+  votingMatrix: publicProcedure
+    .input(z.object({ id: z.number().int(), limit: z.number().int().min(10).max(200).default(50) }))
+    .query(async ({ ctx, input }) => {
+      return ctx.db.execute<VotingMatrixRow>(sql`
+        SELECT h.id, h.datum, h.nazev, h.vysledek, hp.vysledek AS muj_hlas
+        FROM hlasovani_poslanec hp
+        INNER JOIN hlasovani h ON h.id = hp.id_hlasovani
+        WHERE hp.id_poslanec = ${input.id}
+        ORDER BY h.datum DESC NULLS LAST
+        LIMIT ${input.limit}
+      `);
     }),
 });
+
+// Re-export typů pro klienta
+export type { DivergenceRowRaw as DivergenceRow } from "~/server/db/types";
+export type { HlasovaniDetailRow as HlasovaniDetail } from "~/server/db/types";
+export type { VotingMatrixRow as VotingMatrix } from "~/server/db/types";

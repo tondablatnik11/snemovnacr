@@ -66,6 +66,6 @@ const config: NextConfig = {
     ],
     formats: ["image/webp"],
   },
-  };
+};
 
 export default config;

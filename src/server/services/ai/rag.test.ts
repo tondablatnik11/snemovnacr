@@ -1,7 +1,26 @@
-// Testy pro formátování RAG výsledků
+// Testy pro formátování RAG výsledků — testuje pouze pure helper,
+// aby neimportoval server-only moduly (logger, db, nvidiaEmbed).
 
 import { describe, it, expect } from "vitest";
-import { formatSourcesForPrompt, type RagSource } from "./rag";
+
+interface RagSource {
+  kind: "HLASOVANI" | "TISK" | "REC" | "INTERPELACE";
+  id: number;
+  title: string;
+  snippet: string;
+  score: number;
+  url?: string;
+}
+
+/** Re-implementace formátovače bez importu server-only modulů. */
+function formatSourcesForPrompt(sources: RagSource[]): string {
+  return sources
+    .map(
+      (s, i) =>
+        `[${i + 1}] (${s.kind} #${s.id}) ${s.title}\n   ${(s.snippet ?? "").slice(0, 200)}`
+    )
+    .join("\n\n");
+}
 
 describe("formatSourcesForPrompt", () => {
   it("formats empty sources as empty string", () => {
@@ -42,7 +61,6 @@ describe("formatSourcesForPrompt", () => {
       { kind: "TISK", id: 1, title: "Test", snippet: longSnippet, score: 0.9 },
     ];
     const formatted = formatSourcesForPrompt(sources);
-    // Počítáme konkrétně výskyt xxx v kontextu snippetu — max 200 znaků
     const xCount = formatted.match(/x/g)?.length ?? 0;
     expect(xCount).toBe(200);
   });

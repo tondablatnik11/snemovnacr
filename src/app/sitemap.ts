@@ -1,12 +1,17 @@
+// Sitemap — statické + dynamické stránky z databáze.
+// Optimalizováno: dynamické URL jsou limitovány a stránkované, aby sitemap
+// nezahlcovala crawlery.
+
 import type { MetadataRoute } from "next";
 import { getServerCaller } from "~/server/trpc/caller";
 import { env } from "~/lib/env";
+
+const DYNAMIC_LIMIT = 200; // max počet dynamických URL v sitemap
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const baseUrl = env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
   const now = new Date();
 
-  // Statické stránky
   const staticPages: MetadataRoute.Sitemap = [
     { url: `${baseUrl}/`, lastModified: now, changeFrequency: "daily", priority: 1 },
     { url: `${baseUrl}/poslanci`, lastModified: now, changeFrequency: "daily", priority: 0.9 },
@@ -19,16 +24,18 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${baseUrl}/petice`, lastModified: now, changeFrequency: "daily", priority: 0.6 },
   ];
 
-  // Dynamické stránky (best-effort)
   let dynamicPages: MetadataRoute.Sitemap = [];
   try {
     const caller = await getServerCaller();
     const term = (await caller.poslanci.currentTerm())?.id ?? 10;
+
+    // Paralelní dotazy s limitem — sitemap by měl být rychlý i s velkou DB
     const [hlasovani, poslanci, tisk] = await Promise.all([
-      caller.hlasovani.list({ term, pageSize: 500 }),
-      caller.poslanci.list({ term, pageSize: 500 }),
-      caller.tisk.list({ term, pageSize: 500 }),
+      caller.hlasovani.list({ term, pageSize: DYNAMIC_LIMIT }),
+      caller.poslanci.list({ term, pageSize: DYNAMIC_LIMIT }),
+      caller.tisk.list({ term, pageSize: DYNAMIC_LIMIT }),
     ]);
+
     dynamicPages = [
       ...hlasovani.map((v) => ({
         url: `${baseUrl}/hlasovani/${v.id}`,

@@ -7,6 +7,7 @@ import { klubyRouter } from "./kluby";
 import { aiRouter } from "./ai";
 import { peticeRouter } from "./petice";
 import { sledovaneRouter } from "./sledovane";
+import { analyticsRouter } from "./analytics";
 
 export const appRouter = router({
   poslanci: poslanciRouter,
@@ -16,6 +17,7 @@ export const appRouter = router({
   ai: aiRouter,
   petice: peticeRouter,
   sledovane: sledovaneRouter,
+  analytics: analyticsRouter,
 });
 
 export type AppRouter = typeof appRouter;

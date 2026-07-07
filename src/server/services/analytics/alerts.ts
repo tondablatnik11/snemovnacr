@@ -1,9 +1,10 @@
-// Alerting — detekuje kontroverzní hlasování a změny v koaliční disciplíně
+// Alerting — detekuje kontroverzní hlasování a změny v koaliční disciplíně.
+// Plně typově bezpečné — žádné `as unknown as`.
 
 import { db } from "~/server/db";
-import { hlasovani, hlasovaniPoslanec, coalition, poslanec, zarazeni, organ } from "~/server/db/schema/psp";
-import { sql, and, eq, gte } from "drizzle-orm";
+import { sql } from "drizzle-orm";
 import { logger } from "~/lib/logger";
+import type { ContestedVoteRaw } from "~/server/db/types";
 
 export interface ContestedVoteAlert {
   hlasovaniId: number;
@@ -17,10 +18,14 @@ export interface ContestedVoteAlert {
 }
 
 /**
- * Najde kontroverzní hlasování: úzká výhra/prohra + vysoký rozptyl v koalici
+ * Najde kontroverzní hlasování: úzká výhra/prohra + vysoký rozptyl v koalici.
+ * Vrací typově bezpečné výsledky.
  */
-export async function findContestedVotes(since: Date, limit = 10): Promise<ContestedVoteAlert[]> {
-  const rows = await db.execute(sql`
+export async function findContestedVotes(
+  since: Date,
+  limit = 10
+): Promise<ContestedVoteAlert[]> {
+  const rows = await db.execute<ContestedVoteRaw>(sql`
     WITH narrow AS (
       SELECT id, nazev, datum, pro, proti, zdrzel, id_obdobi
       FROM hlasovani
@@ -47,22 +52,14 @@ export async function findContestedVotes(since: Date, limit = 10): Promise<Conte
     LIMIT ${limit}
   `);
 
-  return (rows as unknown as Array<{
-    id: number;
-    nazev: string;
-    datum: Date;
-    pro: number;
-    proti: number;
-    zdrzel: number;
-    koalice_rozptyl: number;
-  }>).map((r) => ({
+  return rows.map((r) => ({
     hlasovaniId: r.id,
     nazev: r.nazev,
-    datum: r.datum,
+    datum: r.datum instanceof Date ? r.datum : new Date(r.datum),
     pro: r.pro,
     proti: r.proti,
     zdrzel: r.zdrzel,
-    koaliceRozptyl: r.koalice_rozptyl,
+    koaliceRozptyl: Number(r.koalice_rozptyl),
   }));
 }
 
@@ -70,13 +67,20 @@ export async function findContestedVotes(since: Date, limit = 10): Promise<Conte
  * Dispatches notifikace pro uživatele sledující daný target.
  * Volá se po novém hlasování nebo změně stavu tisku.
  */
-export async function dispatchWatchAlerts(targetType: string, targetId: string, payload: Record<string, unknown>) {
+export async function dispatchWatchAlerts(
+  targetType: string,
+  targetId: string,
+  payload: Record<string, unknown>
+): Promise<void> {
   const { sledovane, notifikace } = await import("~/server/db/schema/participace");
   const { users } = await import("~/server/db/schema/auth");
+
   const subscribers = await db
     .select()
     .from(sledovane)
-    .where(and(eq(sledovane.targetType, targetType as never), eq(sledovane.targetId, targetId)));
+    .where(
+      sql`${sledovane.targetType} = ${targetType} AND ${sledovane.targetId} = ${targetId}`
+    );
 
   for (const s of subscribers) {
     const channels = (s.channels ?? {}) as { email?: boolean; web?: boolean };
@@ -90,8 +94,7 @@ export async function dispatchWatchAlerts(targetType: string, targetId: string, 
     }
 
     if (channels.email) {
-      // Získat email uživatele a poslat přes Resend
-      const [u] = await db.select().from(users).where(eq(users.id, s.idUser)).limit(1);
+      const [u] = await db.select().from(users).where(sql`${users.id} = ${s.idUser}`).limit(1);
       if (u) {
         const { sendNotificationEmail } = await import("~/server/services/notifications/resend");
         await sendNotificationEmail({
