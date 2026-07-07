@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Bell, BellOff } from "lucide-react";
+import { toast } from "sonner";
 import { api } from "~/trpc/client";
 
 export function WatchToggle({
@@ -18,6 +19,18 @@ export function WatchToggle({
     onSuccess: (data) => {
       setWatching(data.watching);
       utils.sledovane.isWatching.invalidate({ targetType, targetId });
+      if (data.watching) {
+        toast.success("Sleduješ", {
+          description: "Dostaneš notifikaci při nových událostech.",
+        });
+      } else {
+        toast.info("Sledování zrušeno");
+      }
+    },
+    onError: (e) => {
+      toast.error("Nepodařilo se změnit sledování", {
+        description: e.message,
+      });
     },
   });
 
@@ -33,7 +46,7 @@ export function WatchToggle({
       type="button"
       onClick={() => toggle.mutate({ targetType, targetId })}
       disabled={toggle.isPending}
-      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-border hover:bg-muted text-sm disabled:opacity-50"
+      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-border hover:bg-muted text-sm disabled:opacity-50 transition-colors"
     >
       {watching ? (
         <>

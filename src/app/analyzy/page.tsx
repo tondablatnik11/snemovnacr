@@ -1,8 +1,16 @@
 // Analýzy: divergence, cross-party matrix, kontroverzní hlasování, attendance.
 import Link from "next/link";
-import { BarChart3, AlertTriangle, Vote, Users } from "lucide-react";
+import { BarChart3, AlertTriangle, Vote, Users, CalendarCheck, TrendingUp } from "lucide-react";
 import { getServerCaller } from "~/server/trpc/caller";
 import { CrossPartyMatrix, type CrossPartyMatrixData } from "~/components/analytics/cross-party-matrix";
+import {
+  AttendanceChart,
+  type AttendanceDatum,
+} from "~/components/analytics/attendance-chart";
+import {
+  MonthlyTrendChart,
+  type MonthlyDatum,
+} from "~/components/analytics/monthly-trend-chart";
 import { formatDateShort } from "~/lib/format";
 
 export const dynamic = "force-dynamic";
@@ -11,11 +19,24 @@ export default async function AnalyzyPage() {
   const caller = await getServerCaller();
   const term = (await caller.poslanci.currentTerm())?.id ?? 10;
 
-  const [divergence, matrix, contested] = await Promise.all([
+  const [divergence, matrix, contested, attendance, trend] = await Promise.all([
     caller.analytics.divergence({ term, limit: 20 }).catch(() => []),
     caller.analytics.crossPartyMatrix({ term }).catch(() => null),
     caller.analytics.contestedVotes({ daysBack: 90, limit: 5 }).catch(() => []),
+    caller.analytics.attendanceLeaderboard({ term, limit: 15 }).catch(() => []),
+    caller.analytics.monthlyVotesTrend({ term, months: 12 }).catch(() => []),
   ]);
+
+  const attendanceData: AttendanceDatum[] = attendance.map((a) => ({
+    name: `${a.titul_pred ? `${a.titul_pred} ` : ""}${a.jmeno} ${a.prijmeni}`,
+    attendance: a.attendance_pct ?? 0,
+    total: a.total,
+    present: a.present,
+    absent: a.absent,
+    abstain: a.abstain,
+  }));
+
+  const trendData: MonthlyDatum[] = trend;
 
   return (
     <div className="container py-8 space-y-12">
@@ -28,6 +49,20 @@ export default async function AnalyzyPage() {
           Hlasovací vzory, divergence od koalice, cross-party matice a kontroverzní hlasování.
         </p>
       </header>
+
+      {/* Sekce 0: Trend posledních měsíců */}
+      <section className="space-y-4">
+        <div>
+          <h2 className="text-xl font-semibold flex items-center gap-2">
+            <TrendingUp className="h-5 w-5 text-primary" />
+            Trend hlasování (posledních 12 měsíců)
+          </h2>
+          <p className="text-sm text-muted-foreground mt-1">
+            Počet hlasování v Poslanecké sněmovně za jednotlivé měsíce.
+          </p>
+        </div>
+        <MonthlyTrendChart data={trendData} />
+      </section>
 
       {/* Sekce 1: Cross-party heatmapa */}
       <section className="space-y-4">
@@ -63,7 +98,10 @@ export default async function AnalyzyPage() {
         ) : (
           <ul className="divide-y divide-border border border-border rounded-md bg-card">
             {divergence.map((d) => (
-              <li key={d.poslanec_id} className="flex items-center justify-between p-3 hover:bg-muted/30 transition-colors">
+              <li
+                key={d.poslanec_id}
+                className="flex items-center justify-between p-3 hover:bg-muted/30 transition-colors"
+              >
                 <Link
                   href={`/poslanci/${d.poslanec_id}`}
                   className="flex items-center gap-3 flex-1 hover:text-primary"
@@ -93,7 +131,22 @@ export default async function AnalyzyPage() {
         )}
       </section>
 
-      {/* Sekce 3: Kontroverzní hlasování */}
+      {/* Sekce 3: Attendance leaderboard (Recharts vizualizace) */}
+      <section className="space-y-4">
+        <div>
+          <h2 className="text-xl font-semibold flex items-center gap-2">
+            <CalendarCheck className="h-5 w-5 text-primary" />
+            Účast poslanců (top 15)
+          </h2>
+          <p className="text-sm text-muted-foreground mt-1">
+            Poslanci s nejvyšší účastí na hlasováních v aktuálním volebním období.
+            Zelená = ≥80 %, žlutá = 60–80 %, červená = pod 60 %.
+          </p>
+        </div>
+        <AttendanceChart data={attendanceData} limit={15} />
+      </section>
+
+      {/* Sekce 4: Kontroverzní hlasování */}
       <section className="space-y-4">
         <div>
           <h2 className="text-xl font-semibold flex items-center gap-2">
@@ -109,7 +162,10 @@ export default async function AnalyzyPage() {
         ) : (
           <ul className="divide-y divide-border border border-border rounded-md bg-card">
             {contested.map((v) => (
-              <li key={v.hlasovaniId} className="flex items-center justify-between p-3 hover:bg-muted/30 transition-colors">
+              <li
+                key={v.hlasovaniId}
+                className="flex items-center justify-between p-3 hover:bg-muted/30 transition-colors"
+              >
                 <Link
                   href={`/hlasovani/${v.hlasovaniId}`}
                   className="flex items-center gap-3 flex-1 hover:text-primary"

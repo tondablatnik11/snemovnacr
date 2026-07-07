@@ -13,3 +13,33 @@ export const logger = pino({
     ? { transport: { target: "pino-pretty", options: { colorize: true } } }
     : {}),
 });
+
+/**
+ * Vytvoří child logger s kontextovými fields (requestId, userId, atd.).
+ * Child logger dědí konfiguraci z rodiče a přidává vlastní metadata.
+ *
+ * Použití v API route:
+ *   const log = withRequest(req);
+ *   log.info({ endpoint: "/api/chat" }, "Request received");
+ */
+export function withContext(context: Record<string, unknown>) {
+  return logger.child(context);
+}
+
+/**
+ * Extrahuje request ID z headeru nebo generuje nový.
+ * Vrací i sadu hlaviček, které by měla odpověď obsahovat pro tracing.
+ */
+export function getRequestContext(req: Request): {
+  requestId: string;
+  headers: Record<string, string>;
+} {
+  const existing = req.headers.get("x-request-id");
+  const requestId = existing ?? crypto.randomUUID();
+  return {
+    requestId,
+    headers: {
+      "X-Request-Id": requestId,
+    },
+  };
+}

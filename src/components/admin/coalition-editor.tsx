@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Save } from "lucide-react";
+import { toast } from "sonner";
 
 type Role = "VLADA" | "OPOZICE" | "NEZARAZENO";
 
@@ -15,29 +16,30 @@ interface Klub {
 
 export function CoalitionEditor({ initial }: { initial: Klub[] }) {
   const [kluby, setKluby] = useState<Klub[]>(initial);
-  const [saving, setSaving] = useState(false);
-  const [saved, setSaved] = useState(false);
 
   async function save() {
-    setSaving(true);
-    setSaved(false);
-    try {
-      await fetch("/api/admin/coalition", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ updates: kluby.map((k) => ({ idOrgan: k.id, role: k.role })) }),
-      });
-      setSaved(true);
-    } catch {
-      alert("Uložení selhalo.");
-    } finally {
-      setSaving(false);
-    }
+    const promise = fetch("/api/admin/coalition", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ updates: kluby.map((k) => ({ idOrgan: k.id, role: k.role })) }),
+    }).then(async (res) => {
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.error ?? `HTTP ${res.status}`);
+      }
+      return res.json();
+    });
+
+    toast.promise(promise, {
+      loading: "Ukládám změny…",
+      success: "Coalition mapping uložen",
+      error: (err) => `Uložení selhalo: ${err.message ?? err}`,
+    });
   }
 
   return (
     <div className="space-y-4">
-      <ul className="divide-y divide-border border border-border rounded-md">
+      <ul className="divide-y divide-border border border-border rounded-md bg-card">
         {kluby.map((k, i) => (
           <li key={k.id} className="p-4 flex items-center justify-between">
             <span className="font-medium">{k.nazev}</span>
@@ -60,13 +62,11 @@ export function CoalitionEditor({ initial }: { initial: Klub[] }) {
       </ul>
       <button
         onClick={save}
-        disabled={saving}
-        className="inline-flex items-center gap-2 px-4 py-2 rounded-md bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+        className="inline-flex items-center gap-2 px-4 py-2 rounded-md bg-primary text-primary-foreground hover:bg-primary/90 transition-colors font-medium"
       >
         <Save className="h-4 w-4" />
-        {saving ? "Ukládám…" : "Uložit změny"}
+        Uložit změny
       </button>
-      {saved && <p className="text-sm text-vote-pro">✓ Uloženo.</p>}
     </div>
   );
 }

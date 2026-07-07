@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Save, CheckCircle2, Mail } from "lucide-react";
+import { toast } from "sonner";
 import { api } from "~/trpc/client";
 
 export function PetitionSignForm({ peticeId }: { peticeId: string }) {
@@ -9,11 +10,19 @@ export function PetitionSignForm({ peticeId }: { peticeId: string }) {
   const [email, setEmail] = useState("");
   const [comment, setComment] = useState("");
   const [submitted, setSubmitted] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
   const sign = api.petice.sign.useMutation({
-    onSuccess: () => setSubmitted(true),
-    onError: (e) => setError(e.message),
+    onSuccess: () => {
+      setSubmitted(true);
+      toast.success("Podpis zaznamenán", {
+        description: "Děkujeme za vaši podporu této petice.",
+      });
+    },
+    onError: (e) => {
+      toast.error("Nepodařilo se odeslat podpis", {
+        description: e.message,
+      });
+    },
   });
 
   if (submitted) {
@@ -35,8 +44,12 @@ export function PetitionSignForm({ peticeId }: { peticeId: string }) {
     <form
       onSubmit={(e) => {
         e.preventDefault();
-        setError(null);
-        sign.mutate({ peticeId, jmeno: jmeno.trim(), email: email.trim(), commentMd: comment.trim() || undefined });
+        sign.mutate({
+          peticeId,
+          jmeno: jmeno.trim(),
+          email: email.trim(),
+          commentMd: comment.trim() || undefined,
+        });
       }}
       className="space-y-4"
     >
@@ -90,11 +103,6 @@ export function PetitionSignForm({ peticeId }: { peticeId: string }) {
           </div>
         )}
       </div>
-      {error && (
-        <div className="p-3 rounded-md bg-destructive/10 border border-destructive/30 text-sm text-destructive">
-          {error}
-        </div>
-      )}
       <p className="text-xs text-muted-foreground flex items-center gap-1.5">
         <Mail className="h-3 w-3" />
         Podpisem souhlasíte s použitím e-mailu pouze pro účely této petice.

@@ -112,4 +112,68 @@ export const analyticsRouter = router({
       `);
       return rows[0] ?? null;
     }),
+
+  /**
+   * Attendance leaderboard — top N poslanců podle účasti v daném období.
+   * Vrací data připravená pro Recharts vizualizaci.
+   */
+  attendanceLeaderboard: publicProcedure
+    .input(z.object({ term: z.number().int().default(10), limit: z.number().int().min(1).max(100).default(20) }))
+    .query(async ({ ctx, input }) => {
+      return ctx.db.execute<{
+        poslanec_id: number;
+        jmeno: string;
+        prijmeni: string;
+        titul_pred: string | null;
+        total: number;
+        present: number;
+        absent: number;
+        abstain: number;
+        attendance_pct: number | null;
+      }>(sql`
+        WITH all_votes AS (
+          SELECT COUNT(*)::int AS total
+          FROM hlasovani WHERE id_obdobi = ${input.term}
+        ),
+        per_poslanec AS (
+          SELECT
+            p.id AS poslanec_id,
+            o.jmeno, o.prijmeni, o.titul_pred,
+            COUNT(*)::int AS present,
+            SUM(CASE WHEN hp.vysledek IN ('F','@','M','W') THEN 1 ELSE 0 END)::int AS absent,
+            SUM(CASE WHEN hp.vysledek IN ('C','K') THEN 1 ELSE 0 END)::int AS abstain
+          FROM hlasovani_poslanec hp
+          INNER JOIN hlasovani h ON h.id = hp.id_hlasovani
+          INNER JOIN poslanec p ON p.id = hp.id_poslanec AND p.id_obdobi = ${input.term}
+          INNER JOIN osoba o ON o.id = p.id_osoba
+          GROUP BY p.id, o.jmeno, o.prijmeni, o.titul_pred
+          HAVING COUNT(*) >= 50
+        )
+        SELECT poslanec_id, jmeno, prijmeni, titul_pred, all_votes.total, present, absent, abstain,
+          ROUND(100.0 * present / NULLIF(all_votes.total, 0), 2) AS attendance_pct
+        FROM per_poslanec, all_votes
+        ORDER BY attendance_pct DESC NULLS LAST
+        LIMIT ${input.limit}
+      `);
+    }),
+
+  /**
+   * Měsíční trend hlasování — počet hlasování za posledních N měsíců.
+   * Data pro sparkline / area chart na analytics stránce.
+   */
+  monthlyVotesTrend: publicProcedure
+    .input(z.object({ term: z.number().int().default(10), months: z.number().int().min(1).max(24).default(12) }))
+    .query(async ({ ctx, input }) => {
+      const rows = await ctx.db.execute<{ mesic: string; pocet: number }>(sql`
+        SELECT
+          TO_CHAR(datum, 'YYYY-MM') AS mesic,
+          COUNT(*)::int AS pocet
+        FROM hlasovani
+        WHERE id_obdobi = ${input.term}
+          AND datum >= CURRENT_DATE - INTERVAL '${sql.raw(String(input.months))} months'
+        GROUP BY TO_CHAR(datum, 'YYYY-MM')
+        ORDER BY mesic
+      `);
+      return rows;
+    }),
 });
