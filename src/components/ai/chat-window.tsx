@@ -3,14 +3,30 @@
 import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport } from "ai";
 import { useRef, useEffect, useState, type FormEvent } from "react";
-import { Send, AlertCircle, StopCircle } from "lucide-react";
+import { Send, AlertCircle, StopCircle, ExternalLink, BookOpen } from "lucide-react";
+import Link from "next/link";
 import { cn } from "~/lib/utils";
 
+interface RagSourceData {
+  index: number;
+  kind: "HLASOVANI" | "TISK" | "REC" | "INTERPELACE";
+  id: number;
+  title: string;
+  snippet: string;
+  score: number;
+  url: string;
+}
+
+const SOURCE_KIND_LABEL: Record<RagSourceData["kind"], string> = {
+  HLASOVANI: "Hlasování",
+  TISK: "Tisk",
+  REC: "Projev",
+  INTERPELACE: "Interpelace",
+};
+
 /**
- * AI SDK 5 kompatibilní chat window.
- * - `messages` je `UIMessage[]` s `parts` polem
- * - input se spravuje lokálně přes useState
- * - endpoint se nastavuje přes `transport: new DefaultChatTransport({ api: ... })`
+ * AI chat s podporou data parts z RAG.
+ * Sources z poslední odpovědi se zobrazí v sekci "Zdroje" pod textem.
  */
 export function ChatWindow() {
   const { messages, sendMessage, status, error, stop } = useChat({
@@ -44,9 +60,7 @@ export function ChatWindow() {
       >
         {messages.length === 0 && (
           <div className="text-center text-muted-foreground py-16 px-4">
-            <p className="text-sm">
-              Zadejte dotaz nebo klikněte na navrhovanou otázku výše.
-            </p>
+            <p className="text-sm">Zadejte dotaz nebo klikněte na navrhovanou otázku výše.</p>
             <p className="text-xs mt-2 text-muted-foreground/70">
               Odpovědi vycházejí z oficiálních dat PSP a jsou doplněny citacemi.
             </p>
@@ -57,8 +71,18 @@ export function ChatWindow() {
             .filter((p): p is { type: "text"; text: string } => p.type === "text")
             .map((p) => p.text)
             .join("");
+
+          // Extrakce RAG sources z data parts
+          const sourcesData = m.parts
+            .filter((p): p is { type: "data-sources"; data: RagSourceData[] } => p.type === "data-sources")
+            .map((p) => p.data)
+            .flat();
+
           return (
-            <div key={m.id} className={cn("flex", m.role === "user" ? "justify-end" : "justify-start")}>
+            <div
+              key={m.id}
+              className={cn("flex", m.role === "user" ? "justify-end" : "justify-start")}
+            >
               <div
                 className={cn(
                   "max-w-[85%] rounded-lg px-4 py-2.5 text-sm shadow-sm",
@@ -70,9 +94,12 @@ export function ChatWindow() {
                 {m.role === "user" ? (
                   <p className="whitespace-pre-wrap break-words">{text}</p>
                 ) : (
-                  <div className="prose prose-sm dark:prose-invert max-w-none">
-                    <FormattedAnswer content={text} />
-                  </div>
+                  <>
+                    <div className="prose prose-sm dark:prose-invert max-w-none">
+                      <FormattedAnswer content={text} />
+                    </div>
+                    {sourcesData.length > 0 && <SourcesList sources={sourcesData} />}
+                  </>
                 )}
               </div>
             </div>
@@ -82,18 +109,9 @@ export function ChatWindow() {
           <div className="flex justify-start">
             <div className="bg-muted rounded-lg px-4 py-2.5 shadow-sm" aria-label="AI přemýšlí">
               <div className="flex gap-1" aria-hidden="true">
-                <span
-                  className="h-2 w-2 rounded-full bg-muted-foreground animate-bounce"
-                  style={{ animationDelay: "0ms" }}
-                />
-                <span
-                  className="h-2 w-2 rounded-full bg-muted-foreground animate-bounce"
-                  style={{ animationDelay: "150ms" }}
-                />
-                <span
-                  className="h-2 w-2 rounded-full bg-muted-foreground animate-bounce"
-                  style={{ animationDelay: "300ms" }}
-                />
+                <span className="h-2 w-2 rounded-full bg-muted-foreground animate-bounce" style={{ animationDelay: "0ms" }} />
+                <span className="h-2 w-2 rounded-full bg-muted-foreground animate-bounce" style={{ animationDelay: "150ms" }} />
+                <span className="h-2 w-2 rounded-full bg-muted-foreground animate-bounce" style={{ animationDelay: "300ms" }} />
               </div>
             </div>
           </div>
@@ -149,9 +167,40 @@ export function ChatWindow() {
 }
 
 /**
- * Renderuje markdown-like odpovědi: zachovává odstavce, zvýrazní
- * citace [1], [2]… jako horní index.
+ * Renderuje seznam zdrojů z RAG pod textovou odpovědí.
+ * Uživatel může kliknout na zdroj pro přechod na detail stránku.
  */
+function SourcesList({ sources }: { sources: RagSourceData[] }) {
+  return (
+    <details className="mt-3 border-t border-border/50 pt-3" open>
+      <summary className="cursor-pointer text-xs font-medium text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1.5 select-none">
+        <BookOpen className="h-3 w-3" />
+        Zdroje ({sources.length})
+      </summary>
+      <ul className="mt-2 space-y-1.5">
+        {sources.map((src) => (
+          <li key={src.index} className="text-xs">
+            <Link
+              href={src.url}
+              className="inline-flex items-start gap-1.5 hover:text-primary transition-colors"
+            >
+              <span className="font-mono font-bold text-primary">[{src.index}]</span>
+              <span className="flex-1">
+                <span className="text-muted-foreground">
+                  {SOURCE_KIND_LABEL[src.kind]} #{src.id}
+                </span>
+                <span className="ml-1.5">{src.title}</span>
+              </span>
+              <ExternalLink className="h-3 w-3 text-muted-foreground flex-shrink-0 mt-0.5" />
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </details>
+  );
+}
+
+/** Renderuje markdown-like odpovědi s citacemi jako horní index. */
 function FormattedAnswer({ content }: { content: string }) {
   const paragraphs = content.split(/\n\n+/);
   return (

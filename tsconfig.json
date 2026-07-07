@@ -18,6 +18,7 @@
     "jsx": "preserve",
     "incremental": true,
     "verbatimModuleSyntax": false,
+    "types": ["@testing-library/jest-dom"],
     "plugins": [
       {
         "name": "next"

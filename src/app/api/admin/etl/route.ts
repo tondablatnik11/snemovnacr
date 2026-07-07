@@ -11,6 +11,7 @@
 
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { rateLimit, getClientIp } from "~/server/rate-limit";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -29,6 +30,22 @@ const schema = z.object({
 export async function POST(req: Request) {
   if (!authorized(req)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  // Rate limit: max 5 ETL jobů / hodinu (zaberou hodně prostředků)
+  const ip = getClientIp(req);
+  const rl = rateLimit(`etl:${ip}`, 5, 60 * 60_000);
+  if (!rl.allowed) {
+    return NextResponse.json(
+      {
+        error: "ETL rate limit překročen.",
+        retryAfter: rl.retryAfter,
+      },
+      {
+        status: 429,
+        headers: { "Retry-After": String(rl.retryAfter ?? 3600) },
+      }
+    );
   }
 
   const body = await req.json().catch(() => null);
